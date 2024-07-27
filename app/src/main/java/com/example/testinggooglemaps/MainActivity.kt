@@ -11,17 +11,25 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,57 +70,86 @@ class MainActivity : ComponentActivity() {
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun MapComposable(){
+    var postcodeInput by remember { mutableStateOf("") }
+
     val defaultCameraPosition = rememberCameraPositionState{
-        position = CameraPosition.fromLatLngZoom(LatLng(50.9161, -1.3649), 12f)
+        position = CameraPosition.fromLatLngZoom(LatLng(50.92139183397814, -1.4320641306790338),
+            12f)
     }
 
     val mapProperties by remember {
         mutableStateOf(MapProperties(mapType = MapType.TERRAIN))
     }
 
-    GoogleMap(
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = defaultCameraPosition,
-        properties = mapProperties
-    ){
-        MarkerComposable(
-            state = MarkerState(position = LatLng(50.9161, -1.3649)),
+    Column(){
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ){
-            Image(
-                painterResource(id = R.drawable.utilita),
-                contentDescription = null,
-                Modifier.size(36.dp)
+            TextField(
+                value = postcodeInput,
+                onValueChange = {postcodeInput = it},
+                modifier = Modifier.weight(1f),
+                placeholder = {Text("Enter Postcode")}
             )
+
+            Button(onClick = { postcodeInput = " "}, modifier = Modifier.padding(start = 8.dp)){
+                Icon(Icons.Filled.Clear, contentDescription = "Clear Postcode Text")
+            }
+
+            Button(onClick = { /*TODO*/ }, modifier = Modifier.padding(start = 8.dp)){
+                Image(painterResource(
+                    id = R.drawable.access_location_icon),
+                    contentDescription = "Access Location Icon"
+                )
+            }
         }
 
-        MarkerComposable(
-            state = MarkerState(position = LatLng(50.92139183397814, -1.4320641306790338)),
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = defaultCameraPosition,
+            properties = mapProperties
         ){
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+            MarkerComposable(
+                state = MarkerState(position = LatLng(50.9161, -1.3649)),
             ){
-
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                        .background(Color.Red, shape = RoundedCornerShape(4.dp))
-                ){
-                    Text(
-                        text = "Utilita Energy Hub Shirley",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(2.dp)
-                    )
-                }
-
                 Image(
                     painterResource(id = R.drawable.utilita),
                     contentDescription = null,
                     Modifier.size(36.dp)
                 )
             }
-        }
 
+            MarkerComposable(
+                state = MarkerState(position = LatLng(50.92139183397814, -1.4320641306790338)),
+            ){
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ){
+
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .background(Color.Red, shape = RoundedCornerShape(4.dp))
+                    ){
+                        Text(
+                            text = "Utilita Energy Hub Shirley",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(2.dp)
+                        )
+                    }
+
+                    Image(
+                        painterResource(id = R.drawable.utilita),
+                        contentDescription = null,
+                        Modifier.size(36.dp)
+                    )
+                }
+            }
+
+        }
     }
 }
