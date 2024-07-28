@@ -1,9 +1,14 @@
 package com.example.testinggooglemaps
 
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.testinggooglemaps.ui.theme.TestingGoogleMapsTheme
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -51,8 +58,13 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 
 class MainActivity : ComponentActivity() {
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var permissionLauncher: ActivityResultLauncher<String>
+    private var isPermissionGranted = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        requestPermissions()
         setContent {
             TestingGoogleMapsTheme {
                 // A surface container using the 'background' color from the theme
@@ -65,91 +77,118 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
 
-@SuppressLint("UnrememberedMutableState")
-@Composable
-fun MapComposable(){
-    var postcodeInput by remember { mutableStateOf("") }
-
-    val defaultCameraPosition = rememberCameraPositionState{
-        position = CameraPosition.fromLatLngZoom(LatLng(50.92139183397814, -1.4320641306790338),
-            12f)
-    }
-
-    val mapProperties by remember {
-        mutableStateOf(MapProperties(mapType = MapType.TERRAIN))
-    }
-
-    Column(){
-        Row(modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ){
-            TextField(
-                value = postcodeInput,
-                onValueChange = {postcodeInput = it},
-                modifier = Modifier.weight(1f),
-                placeholder = {Text("Enter Postcode")}
-            )
-
-            Button(onClick = { postcodeInput = " "}, modifier = Modifier.padding(start = 8.dp)){
-                Icon(Icons.Filled.Clear, contentDescription = "Clear Postcode Text")
-            }
-
-            Button(onClick = { /*TODO*/ }, modifier = Modifier.padding(start = 8.dp)){
-                Image(painterResource(
-                    id = R.drawable.access_location_icon),
-                    contentDescription = "Access Location Icon"
-                )
+    fun requestPermissions(){
+        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()){isGranted ->
+            if(isGranted){
+                isPermissionGranted = true
+                checkUserLocationPermissions()
+            }else{
+                Toast.makeText(this, "GPS Permissions Declined", Toast.LENGTH_LONG).show()
             }
         }
+    }
 
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = defaultCameraPosition,
-            properties = mapProperties
-        ){
-            MarkerComposable(
-                state = MarkerState(position = LatLng(50.9161, -1.3649)),
+    fun checkUserLocationPermissions(){
+        if(checkSelfPermission("android.Manifest.permission.ACCESS_FINE_LOCATION") == PackageManager.PERMISSION_GRANTED){
+            isPermissionGranted = true
+            fusedLocationClient.lastLocation.addOnSuccessListener {location : Location? ->
+                if (location != null) {
+                    Toast.makeText(this, "${location.latitude}, ${location.longitude}", Toast.LENGTH_LONG).show()
+                }else{
+                    Toast.makeText(this, "GPS Location unavailable", Toast.LENGTH_LONG).show()
+                }
+            }
+        }else{
+            //Request the Location Permissions From the User
+            permissionLauncher.launch("android.Manifest.permission.ACCESS_FINE_LOCATION")
+        }
+    }
+    @SuppressLint("UnrememberedMutableState")
+    @Composable
+    fun MapComposable(){
+        var postcodeInput by remember { mutableStateOf("") }
+
+        val defaultCameraPosition = rememberCameraPositionState{
+            position = CameraPosition.fromLatLngZoom(LatLng(50.92139183397814, -1.4320641306790338),
+                12f)
+        }
+
+        val mapProperties by remember {
+            mutableStateOf(MapProperties(mapType = MapType.TERRAIN))
+        }
+
+        Column(){
+            Row(modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ){
-                Image(
-                    painterResource(id = R.drawable.utilita),
-                    contentDescription = null,
-                    Modifier.size(36.dp)
+                TextField(
+                    value = postcodeInput,
+                    onValueChange = {postcodeInput = it},
+                    modifier = Modifier.weight(1f),
+                    placeholder = {Text("Enter Postcode")}
                 )
+
+                Button(onClick = { postcodeInput = " "}, modifier = Modifier.padding(start = 8.dp)){
+                    Icon(Icons.Filled.Clear, contentDescription = "Clear Postcode Text")
+                }
+
+                Button(onClick = { checkUserLocationPermissions() }, modifier = Modifier.padding(start = 8.dp)){
+                    Image(painterResource(
+                        id = R.drawable.access_location_icon),
+                        contentDescription = "Access Location Icon"
+                    )
+                }
             }
 
-            MarkerComposable(
-                state = MarkerState(position = LatLng(50.92139183397814, -1.4320641306790338)),
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = defaultCameraPosition,
+                properties = mapProperties
             ){
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
+                MarkerComposable(
+                    state = MarkerState(position = LatLng(50.9161, -1.3649)),
                 ){
-
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .background(Color.Red, shape = RoundedCornerShape(4.dp))
-                    ){
-                        Text(
-                            text = "Utilita Energy Hub Shirley",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(2.dp)
-                        )
-                    }
-
                     Image(
                         painterResource(id = R.drawable.utilita),
                         contentDescription = null,
                         Modifier.size(36.dp)
                     )
                 }
-            }
 
+                MarkerComposable(
+                    state = MarkerState(position = LatLng(50.92139183397814, -1.4320641306790338)),
+                ){
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ){
+
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .background(Color.Red, shape = RoundedCornerShape(4.dp))
+                        ){
+                            Text(
+                                text = "Utilita Energy Hub Shirley",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(2.dp)
+                            )
+                        }
+
+                        Image(
+                            painterResource(id = R.drawable.utilita),
+                            contentDescription = null,
+                            Modifier.size(36.dp)
+                        )
+                    }
+                }
+
+            }
         }
     }
 }
+
