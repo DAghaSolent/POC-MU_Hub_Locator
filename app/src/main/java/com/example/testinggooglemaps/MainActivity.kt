@@ -49,6 +49,8 @@ import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.MarkerInfoWindow
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.example.testinggooglemaps.MapStyle
+import com.google.android.gms.maps.model.MapStyleOptions
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,15 +73,16 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MapComposable(){
     var postcodeInput by remember { mutableStateOf("") }
+    val mapStyle = MapStyle.styleJson
 
     val defaultCameraPosition = rememberCameraPositionState{
         position = CameraPosition.fromLatLngZoom(LatLng(50.92139183397814, -1.4320641306790338),
             12f)
     }
 
-    val mapProperties by remember {
-        mutableStateOf(MapProperties(mapType = MapType.TERRAIN))
-    }
+    val mapProperties = MapProperties(
+        mapStyleOptions = MapStyleOptions(mapStyle)
+    )
 
     Column(){
         Row(modifier = Modifier
