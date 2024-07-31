@@ -1,7 +1,11 @@
 package com.example.testinggooglemaps
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.location.Address
+import android.location.Geocoder
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -19,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,6 +57,8 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.example.testinggooglemaps.MapStyle
 import com.google.android.gms.maps.model.MapStyleOptions
+import java.io.IOException
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,8 +82,10 @@ class MainActivity : ComponentActivity() {
 fun MapComposable(){
     var postcodeInput by remember { mutableStateOf("") }
     val mapStyle = MapStyle.styleJson
+    val localContext = LocalContext.current
 
-    val defaultCameraPosition = rememberCameraPositionState{
+    // Setting default camera position to Shirley Utilita Energy Hub.
+    val currentCameraPosition = rememberCameraPositionState{
         position = CameraPosition.fromLatLngZoom(LatLng(50.92139183397814, -1.4320641306790338),
             12f)
     }
@@ -97,6 +107,20 @@ fun MapComposable(){
                 placeholder = {Text("Enter Postcode")}
             )
 
+            Button(onClick = {
+                val postcodeLatLng = getLatLngFromPostcode(localContext, postcodeInput)
+
+                if(postcodeLatLng != null){
+                    currentCameraPosition.position = CameraPosition.fromLatLngZoom(postcodeLatLng, 12f)
+                }else{
+                    Toast.makeText(localContext, "Postcode not found", Toast.LENGTH_LONG).show()
+                }
+                             },
+                modifier = Modifier.padding(start=8.dp)
+            ){
+                Icon(Icons.Filled.Search, contentDescription = "Search with Postcode")
+            }
+
             Button(onClick = { postcodeInput = " "}, modifier = Modifier.padding(start = 8.dp)){
                 Icon(Icons.Filled.Clear, contentDescription = "Clear Postcode Text")
             }
@@ -111,7 +135,7 @@ fun MapComposable(){
 
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = defaultCameraPosition,
+            cameraPositionState = currentCameraPosition,
             properties = mapProperties
         ){
             MarkerComposable(
@@ -155,4 +179,18 @@ fun MapComposable(){
 
         }
     }
+}
+fun getLatLngFromPostcode(context: Context, postcode: String): LatLng? {
+    val geocoder = Geocoder(context, Locale.getDefault())
+
+    try{
+        val address: MutableList<Address>? = geocoder.getFromLocationName(postcode, 1)
+
+        if(!address.isNullOrEmpty()){
+            return LatLng(address[0].latitude, address[0].longitude)
+        }
+    }catch (e: IOException) {
+        e.printStackTrace()
+    }
+    return null
 }
