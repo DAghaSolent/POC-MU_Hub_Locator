@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        requestPermissions()
+        createLauncher()
         setContent {
             TestingGoogleMapsTheme {
                 // A surface container using the 'background' color from the theme
@@ -78,30 +78,31 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun requestPermissions(){
+    fun createLauncher(){
         permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()){isGranted ->
             if(isGranted){
                 isPermissionGranted = true
                 checkUserLocationPermissions()
             }else{
-                Toast.makeText(this, "GPS Permissions Declined", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "GPS Permissions Declined", Toast.LENGTH_SHORT).show()
+                checkUserLocationPermissions()
             }
         }
     }
 
     fun checkUserLocationPermissions(){
-        if(checkSelfPermission("android.Manifest.permission.ACCESS_FINE_LOCATION") == PackageManager.PERMISSION_GRANTED){
+        if(checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             isPermissionGranted = true
             fusedLocationClient.lastLocation.addOnSuccessListener {location : Location? ->
                 if (location != null) {
                     Toast.makeText(this, "${location.latitude}, ${location.longitude}", Toast.LENGTH_LONG).show()
                 }else{
-                    Toast.makeText(this, "GPS Location unavailable", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "GPS Location unavailable", Toast.LENGTH_SHORT).show()
                 }
             }
         }else{
             //Request the Location Permissions From the User
-            permissionLauncher.launch("android.Manifest.permission.ACCESS_FINE_LOCATION")
+            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
     @SuppressLint("UnrememberedMutableState")
