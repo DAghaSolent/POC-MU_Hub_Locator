@@ -85,7 +85,6 @@ class MainActivity : ComponentActivity() {
                 checkUserLocationPermissions()
             }else{
                 Toast.makeText(this, "GPS Permissions Declined", Toast.LENGTH_SHORT).show()
-                checkUserLocationPermissions()
             }
         }
     }
