@@ -2,12 +2,17 @@ package com.example.testinggooglemaps
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
+import android.location.Location
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -56,13 +61,20 @@ import com.google.maps.android.compose.MarkerInfoWindow
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.example.testinggooglemaps.MapStyle
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.MapStyleOptions
 import java.io.IOException
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var permissionLauncher: ActivityResultLauncher<String>
+    private val mapViewModel : MapViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        invokePermissionsLauncher()
         setContent {
             TestingGoogleMapsTheme {
                 // A surface container using the 'background' color from the theme
@@ -75,122 +87,154 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
 
-@SuppressLint("UnrememberedMutableState")
-@Composable
-fun MapComposable(){
-    var postcodeInput by remember { mutableStateOf("") }
-    val mapStyle = MapStyle.styleJson
-    val localContext = LocalContext.current
+    @SuppressLint("UnrememberedMutableState")
+    @Composable
+    fun MapComposable(){
+        var postcodeInput by remember { mutableStateOf("") }
+        val mapStyle = MapStyle.styleJson
+        val localContext = LocalContext.current
 
-    // Setting default camera position to Shirley Utilita Energy Hub.
-    val currentCameraPosition = rememberCameraPositionState{
-        position = CameraPosition.fromLatLngZoom(LatLng(50.92139183397814, -1.4320641306790338),
-            12f)
-    }
-
-    val mapProperties = MapProperties(
-        mapStyleOptions = MapStyleOptions(mapStyle)
-    )
-
-    Column(){
-        Row(modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ){
-            TextField(
-                value = postcodeInput,
-                onValueChange = {postcodeInput = it},
-                modifier = Modifier.weight(1f),
-                placeholder = {Text("Enter Postcode")}
-            )
-
-            Button(onClick = {
-                val postcodeLatLng = getLatLngFromPostcode(localContext, postcodeInput)
-
-                if(postcodeLatLng != null){
-                    currentCameraPosition.position = CameraPosition.fromLatLngZoom(postcodeLatLng, 12f)
-                }else{
-                    Toast.makeText(localContext, "Postcode not found", Toast.LENGTH_LONG).show()
-                }
-                             },
-                modifier = Modifier.padding(start=8.dp)
-            ){
-                Icon(Icons.Filled.Search, contentDescription = "Search with Postcode")
-            }
-
-            Button(onClick = { postcodeInput = " "}, modifier = Modifier.padding(start = 8.dp)){
-                Icon(Icons.Filled.Clear, contentDescription = "Clear Postcode Text")
-            }
-
-            Button(onClick = { /*TODO*/ }, modifier = Modifier.padding(start = 8.dp)){
-                Image(painterResource(
-                    id = R.drawable.access_location_icon),
-                    contentDescription = "Access Location Icon"
-                )
-            }
+        // Setting default camera position to Shirley Utilita Energy Hub.
+        val currentCameraPosition = rememberCameraPositionState{
+            position = CameraPosition.fromLatLngZoom(LatLng(50.92139183397814, -1.4320641306790338),
+                12f)
         }
 
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = currentCameraPosition,
-            properties = mapProperties
-        ){
-            MarkerComposable(
-                state = MarkerState(position = LatLng(50.9161, -1.3649)),
+        // Observing any changes within the Camera Viewmodel that could be potentially changed when
+        // the application
+        mapViewModel.cameraPositionLiveData.observe(this) { newCameraPosition ->
+            currentCameraPosition.position = newCameraPosition
+        }
+
+        val mapProperties = MapProperties(
+            mapStyleOptions = MapStyleOptions(mapStyle)
+        )
+
+        Column(){
+            Row(modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ){
-                Image(
-                    painterResource(id = R.drawable.utilita),
-                    contentDescription = null,
-                    Modifier.size(36.dp)
+                TextField(
+                    value = postcodeInput,
+                    onValueChange = {postcodeInput = it},
+                    modifier = Modifier.weight(1f),
+                    placeholder = {Text("Enter Postcode")}
                 )
+
+                Button(onClick = {
+                    val postcodeLatLng = getLatLngFromPostcode(localContext, postcodeInput)
+
+                    if(postcodeLatLng != null){
+                        currentCameraPosition.position = CameraPosition.fromLatLngZoom(postcodeLatLng, 12f)
+                    }else{
+                        Toast.makeText(localContext, "Postcode not found", Toast.LENGTH_LONG).show()
+                    }
+                },
+                    modifier = Modifier.padding(start=8.dp)
+                ){
+                    Icon(Icons.Filled.Search, contentDescription = "Search with Postcode")
+                }
+
+                Button(onClick = { postcodeInput = " "}, modifier = Modifier.padding(start = 8.dp)){
+                    Icon(Icons.Filled.Clear, contentDescription = "Clear Postcode Text")
+                }
+
+                Button(onClick = { getUserLocation() }, modifier = Modifier.padding(start = 8.dp)){
+                    Image(painterResource(
+                        id = R.drawable.access_location_icon),
+                        contentDescription = "Access Location Icon"
+                    )
+                }
             }
 
-            MarkerComposable(
-                state = MarkerState(position = LatLng(50.92139183397814, -1.4320641306790338)),
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = currentCameraPosition,
+                properties = mapProperties
             ){
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
+                MarkerComposable(
+                    state = MarkerState(position = LatLng(50.9161, -1.3649)),
                 ){
-
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .background(Color.Red, shape = RoundedCornerShape(4.dp))
-                    ){
-                        Text(
-                            text = "Utilita Energy Hub Shirley",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(2.dp)
-                        )
-                    }
-
                     Image(
                         painterResource(id = R.drawable.utilita),
                         contentDescription = null,
                         Modifier.size(36.dp)
                     )
                 }
+
+                MarkerComposable(
+                    state = MarkerState(position = LatLng(50.92139183397814, -1.4320641306790338)),
+                ){
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ){
+
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .background(Color.Red, shape = RoundedCornerShape(4.dp))
+                        ){
+                            Text(
+                                text = "Utilita Energy Hub Shirley",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(2.dp)
+                            )
+                        }
+
+                        Image(
+                            painterResource(id = R.drawable.utilita),
+                            contentDescription = null,
+                            Modifier.size(36.dp)
+                        )
+                    }
+                }
+
             }
-
         }
     }
-}
-fun getLatLngFromPostcode(context: Context, postcode: String): LatLng? {
-    val geocoder = Geocoder(context, Locale.getDefault())
+    fun getLatLngFromPostcode(context: Context, postcode: String): LatLng? {
+        val geocoder = Geocoder(context, Locale.getDefault())
 
-    try{
-        val address: MutableList<Address>? = geocoder.getFromLocationName(postcode, 1)
+        try{
+            val address: MutableList<Address>? = geocoder.getFromLocationName(postcode, 1)
 
-        if(!address.isNullOrEmpty()){
-            return LatLng(address[0].latitude, address[0].longitude)
+            if(!address.isNullOrEmpty()){
+                return LatLng(address[0].latitude, address[0].longitude)
+            }
+        }catch (e: IOException) {
+            e.printStackTrace()
         }
-    }catch (e: IOException) {
-        e.printStackTrace()
+        return null
     }
-    return null
+
+    fun invokePermissionsLauncher(){
+        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()){ isGranted ->
+            if(isGranted){
+                getUserLocation()
+            }else{
+                Toast.makeText(this, "GPS Permissions Declined", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    fun getUserLocation(){
+        if(checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+            fusedLocationClient.lastLocation.addOnSuccessListener {location : Location? ->
+                if (location != null) {
+                    val userLocation = LatLng(location.latitude, location.longitude)
+                    mapViewModel.cameraPositionLiveData.value = CameraPosition.fromLatLngZoom(userLocation,12f)
+                }else{
+                    Toast.makeText(this, "GPS Location unavailable", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }else{
+            //Request the Location Permissions From the User
+            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
 }

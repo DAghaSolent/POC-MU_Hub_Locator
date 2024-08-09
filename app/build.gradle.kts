@@ -75,6 +75,8 @@ dependencies {
     implementation("com.google.maps.android:maps-compose-utils:$mapsComposeVersion")
     // Google Maps Compose widgets library
     implementation("com.google.maps.android:maps-compose-widgets:$mapsComposeVersion")
+    // Google Play Services Location required for Fused Location Client
+    implementation ("com.google.android.gms:play-services-location:21.3.0")
 }
 
 secrets {
