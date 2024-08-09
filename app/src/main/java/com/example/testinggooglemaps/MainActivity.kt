@@ -63,7 +63,11 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.example.testinggooglemaps.MapStyle
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.android.gms.tasks.CancellationToken
+import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.android.gms.tasks.OnTokenCanceledListener
 import java.io.IOException
 import java.util.Locale
 
@@ -224,14 +228,18 @@ class MainActivity : ComponentActivity() {
 
     fun getUserLocation(){
         if(checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-            fusedLocationClient.lastLocation.addOnSuccessListener {location : Location? ->
-                if (location != null) {
-                    val userLocation = LatLng(location.latitude, location.longitude)
-                    mapViewModel.cameraPositionLiveData.value = CameraPosition.fromLatLngZoom(userLocation,12f)
-                }else{
-                    Toast.makeText(this, "GPS Location unavailable", Toast.LENGTH_SHORT).show()
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, object : CancellationToken(){
+                override fun onCanceledRequested(p0: OnTokenCanceledListener) = CancellationTokenSource().token
+                override fun isCancellationRequested() = false
+            })
+                .addOnSuccessListener { location: Location? ->
+                    if(location != null){
+                        val userLocation = LatLng(location.latitude, location.longitude)
+                        mapViewModel.cameraPositionLiveData.value = CameraPosition.fromLatLngZoom(userLocation,12f)
+                    }else{
+                        Toast.makeText(this, "GPS Location unavailable", Toast.LENGTH_SHORT).show()
+                    }
                 }
-            }
         }else{
             //Request the Location Permissions From the User
             permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
