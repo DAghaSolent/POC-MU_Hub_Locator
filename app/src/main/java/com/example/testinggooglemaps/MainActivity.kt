@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -67,6 +69,7 @@ import com.google.android.gms.maps.model.MapStyleOptions
 import java.io.IOException
 import java.util.Locale
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.text.style.TextAlign
 
 class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -152,20 +155,42 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = currentCameraPosition,
-                properties = mapProperties
-            ){
-                utilitaPOIs.forEach { utilitaPOI ->
-                    MarkerComposable(
-                        state = MarkerState(position = LatLng(utilitaPOI.lat, utilitaPOI.lon))
+            Column(modifier = Modifier.fillMaxSize()) {
+
+                Box(modifier = Modifier.weight(1.25f)){
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = currentCameraPosition,
+                        properties = mapProperties
                     ){
-                        Image(
-                            painterResource(id = R.drawable.utilita),
-                            contentDescription = null,
-                            Modifier.size(36.dp)
-                        )
+                        utilitaPOIs.forEach { utilitaPOI ->
+                            MarkerComposable(
+                                state = MarkerState(position = LatLng(utilitaPOI.lat, utilitaPOI.lon))
+                            ){
+                                Image(
+                                    painterResource(id = R.drawable.utilita),
+                                    contentDescription = null,
+                                    Modifier.size(36.dp)
+                                )
+                            }
+                        }
+
+                    }
+                }
+
+                Box(modifier = Modifier.weight(0.75f)){
+                    LazyColumn {
+                        items(utilitaPOIs) { utilitaPOI ->
+                            Text("${utilitaPOI.description}\n" +
+                                    "${utilitaPOI.address}, ${utilitaPOI.city_town}, ${utilitaPOI.postcode}\n" +
+                                    "${utilitaPOI.phone_number}\n${utilitaPOI.emailAddress}",
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .border(width = 1.dp, color = Color.Magenta)
+                                    .padding(8.dp)
+                                )
+                        }
                     }
                 }
 
