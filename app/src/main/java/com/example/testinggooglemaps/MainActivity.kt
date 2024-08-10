@@ -66,6 +66,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.MapStyleOptions
 import java.io.IOException
 import java.util.Locale
+import androidx.compose.runtime.livedata.observeAsState
 
 class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -94,10 +95,11 @@ class MainActivity : ComponentActivity() {
         var postcodeInput by remember { mutableStateOf("") }
         val mapStyle = MapStyle.styleJson
         val localContext = LocalContext.current
+        val utilitaPOIs by mapViewModel.listUtilitaPOI.observeAsState(emptyList())
 
         // Setting default camera position to Shirley Utilita Energy Hub.
         val currentCameraPosition = rememberCameraPositionState{
-            position = CameraPosition.fromLatLngZoom(LatLng(50.92139183397814, -1.4320641306790338),
+            position = CameraPosition.fromLatLngZoom(LatLng(50.92094035265595, -1.4319340450913751),
                 12f)
         }
 
@@ -155,37 +157,10 @@ class MainActivity : ComponentActivity() {
                 cameraPositionState = currentCameraPosition,
                 properties = mapProperties
             ){
-                MarkerComposable(
-                    state = MarkerState(position = LatLng(50.9161, -1.3649)),
-                ){
-                    Image(
-                        painterResource(id = R.drawable.utilita),
-                        contentDescription = null,
-                        Modifier.size(36.dp)
-                    )
-                }
-
-                MarkerComposable(
-                    state = MarkerState(position = LatLng(50.92139183397814, -1.4320641306790338)),
-                ){
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                utilitaPOIs.forEach { utilitaPOI ->
+                    MarkerComposable(
+                        state = MarkerState(position = LatLng(utilitaPOI.lat, utilitaPOI.lon))
                     ){
-
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                .background(Color.Red, shape = RoundedCornerShape(4.dp))
-                        ){
-                            Text(
-                                text = "Utilita Energy Hub Shirley",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(2.dp)
-                            )
-                        }
-
                         Image(
                             painterResource(id = R.drawable.utilita),
                             contentDescription = null,
