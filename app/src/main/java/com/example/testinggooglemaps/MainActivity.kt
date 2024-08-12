@@ -70,6 +70,9 @@ import java.io.IOException
 import java.util.Locale
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.text.style.TextAlign
+import com.google.maps.android.SphericalUtil
+import java.math.RoundingMode
+import java.text.DecimalFormat
 
 class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -181,9 +184,15 @@ class MainActivity : ComponentActivity() {
                 Box(modifier = Modifier.weight(0.75f)){
                     LazyColumn {
                         items(utilitaPOIs) { utilitaPOI ->
+                            val distanceUserLocToHub = calculateDistance(utilitaPOI, currentCameraPosition.position)
+                            val twoDecimalFormattingDistance = DecimalFormat("#.##").apply {
+                                roundingMode = RoundingMode.DOWN
+                            }.format(distanceUserLocToHub)
+
                             Text("${utilitaPOI.description}\n" +
                                     "${utilitaPOI.address}, ${utilitaPOI.city_town}, ${utilitaPOI.postcode}\n" +
-                                    "${utilitaPOI.phone_number}\n${utilitaPOI.emailAddress}",
+                                    "${utilitaPOI.phone_number}\n${utilitaPOI.emailAddress}\n" +
+                                    "${twoDecimalFormattingDistance} Miles",
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -236,5 +245,13 @@ class MainActivity : ComponentActivity() {
             //Request the Location Permissions From the User
             permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
         }
+    }
+
+    fun calculateDistance(poi: UtilitaPOI, cameraPosition : CameraPosition): Double {
+        val distanceMetres = SphericalUtil.computeDistanceBetween(cameraPosition.target,(LatLng(poi.lat, poi.lon)))
+        // Convert overall distance calculation from Meters to Miles for UK Format.
+        val distanceMiles =  distanceMetres / 1606.34
+
+        return distanceMiles
     }
 }
