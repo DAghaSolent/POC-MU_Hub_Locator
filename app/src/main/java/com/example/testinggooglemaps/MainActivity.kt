@@ -171,7 +171,7 @@ class MainActivity : ComponentActivity() {
                                 state = MarkerState(position = LatLng(utilitaPOI.lat, utilitaPOI.lon))
                             ){
                                 Image(
-                                    painterResource(id = R.drawable.utilita),
+                                    painterResource(id = R.drawable.color_utilita),
                                     contentDescription = null,
                                     Modifier.size(36.dp)
                                 )
