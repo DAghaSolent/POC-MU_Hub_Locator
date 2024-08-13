@@ -38,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -103,6 +104,10 @@ class MainActivity : ComponentActivity() {
         val localContext = LocalContext.current
         val utilitaPOIs by mapViewModel.listUtilitaPOI.observeAsState(emptyList())
 
+        // List to store a sorted list of Utilita POIs from closest to furthest that will re-compose/
+        // re-draw the list depending on the current camera position on the map's application.
+        val sortedDistanceUtilitaPOIs = remember { mutableStateOf(listOf<UtilitaPOI>()) }
+
         // Setting default camera position to Shirley Utilita Energy Hub.
         val currentCameraPosition = rememberCameraPositionState{
             position = CameraPosition.fromLatLngZoom(LatLng(50.92094035265595, -1.4319340450913751),
@@ -113,6 +118,12 @@ class MainActivity : ComponentActivity() {
         // the application
         mapViewModel.cameraPositionLiveData.observe(this) { newCameraPosition ->
             currentCameraPosition.position = newCameraPosition
+        }
+
+        LaunchedEffect(currentCameraPosition.position){
+            sortedDistanceUtilitaPOIs.value = utilitaPOIs.sortedBy {utilitaPOI ->
+                calculateDistance(utilitaPOI, currentCameraPosition.position)
+            }
         }
 
         val mapProperties = MapProperties(
@@ -177,13 +188,12 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
-
                     }
                 }
 
                 Box(modifier = Modifier.weight(0.75f)){
                     LazyColumn {
-                        items(utilitaPOIs) { utilitaPOI ->
+                        items(sortedDistanceUtilitaPOIs.value) { utilitaPOI ->
                             val distanceUserLocToHub = calculateDistance(utilitaPOI, currentCameraPosition.position)
                             val twoDecimalFormattingDistance = DecimalFormat("#.##").apply {
                                 roundingMode = RoundingMode.DOWN
