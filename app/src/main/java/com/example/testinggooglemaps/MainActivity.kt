@@ -206,7 +206,7 @@ class MainActivity : ComponentActivity() {
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .border(width = 1.dp, color = Color.Magenta)
+                                    .border(width = 3.dp, color = Color.Black)
                                     .padding(8.dp)
                                 )
                         }
