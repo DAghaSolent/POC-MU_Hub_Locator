@@ -202,6 +202,7 @@ class MainActivity : ComponentActivity() {
                             Text("${utilitaPOI.description}\n" +
                                     "${utilitaPOI.address}, ${utilitaPOI.city_town}, ${utilitaPOI.postcode}\n" +
                                     "${utilitaPOI.phone_number}\n${utilitaPOI.emailAddress}\n" +
+                                    "${utilitaPOI.openingTimes}\n" +
                                     "${twoDecimalFormattingDistance} Miles",
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
