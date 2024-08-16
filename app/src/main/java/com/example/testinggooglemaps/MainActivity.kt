@@ -103,6 +103,7 @@ class MainActivity : ComponentActivity() {
         val mapStyle = MapStyle.styleJson
         val localContext = LocalContext.current
         val utilitaPOIs by mapViewModel.listUtilitaPOI.observeAsState(emptyList())
+        val userLocation by mapViewModel.cameraPositionLiveData.observeAsState()
 
         // List to store a sorted list of Utilita POIs from closest to furthest that will re-compose/
         // re-draw the list depending on the current camera position on the map's application.
@@ -114,10 +115,12 @@ class MainActivity : ComponentActivity() {
                 12f)
         }
 
-        // Observing any changes within the Camera Viewmodel that could be potentially changed when
-        // the application
-        mapViewModel.cameraPositionLiveData.observe(this) { newCameraPosition ->
-            currentCameraPosition.position = newCameraPosition
+        LaunchedEffect(userLocation) {
+            if (userLocation != null) {
+                currentCameraPosition.position = CameraPosition.fromLatLngZoom(
+                    LatLng(userLocation!!.target.latitude, userLocation!!.target.longitude),12f
+                )
+            }
         }
 
         LaunchedEffect(currentCameraPosition.position){
@@ -161,7 +164,17 @@ class MainActivity : ComponentActivity() {
                     Icon(Icons.Filled.Clear, contentDescription = "Clear Postcode Text")
                 }
 
-                Button(onClick = { getUserLocation() }, modifier = Modifier.padding(start = 8.dp)){
+                Button(onClick = {
+                    getUserLocation()
+
+                    if (userLocation != null){
+                        currentCameraPosition.position = CameraPosition.fromLatLngZoom(
+                            LatLng(userLocation!!.target.latitude, userLocation!!.target.longitude),
+                            12f
+                        )
+                    }
+                },
+                    modifier = Modifier.padding(start = 8.dp)){
                     Image(painterResource(
                         id = R.drawable.access_location_icon),
                         contentDescription = "Access Location Icon"
