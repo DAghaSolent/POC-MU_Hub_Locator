@@ -104,6 +104,7 @@ class MainActivity : ComponentActivity() {
         val localContext = LocalContext.current
         val utilitaPOIs by mapViewModel.listUtilitaPOI.observeAsState(emptyList())
         val userLocation by mapViewModel.cameraPositionLiveData.observeAsState()
+        var selectedUtilitaPOI by remember { mutableStateOf<UtilitaPOI?>(null) }
 
         // List to store a sorted list of Utilita POIs from closest to furthest that will re-compose/
         // re-draw the list depending on the current camera position on the map's application.
@@ -128,6 +129,8 @@ class MainActivity : ComponentActivity() {
                 calculateDistance(utilitaPOI, currentCameraPosition.position)
             }
         }
+
+        LaunchedEffect(currentCameraPosition.position){ selectedUtilitaPOI = null}
 
         val mapProperties = MapProperties(
             mapStyleOptions = MapStyleOptions(mapStyle)
@@ -188,11 +191,13 @@ class MainActivity : ComponentActivity() {
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = currentCameraPosition,
-                        properties = mapProperties
+                        properties = mapProperties,
+                        onMapClick = {selectedUtilitaPOI = null}
                     ){
                         utilitaPOIs.forEach { utilitaPOI ->
                             MarkerComposable(
-                                state = MarkerState(position = LatLng(utilitaPOI.lat, utilitaPOI.lon))
+                                state = MarkerState(position = LatLng(utilitaPOI.lat, utilitaPOI.lon)),
+                                onClick = {selectedUtilitaPOI = utilitaPOI ; true}
                             ){
                                 Image(
                                     painterResource(id = R.drawable.color_utilita),
@@ -205,28 +210,48 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Box(modifier = Modifier.weight(0.75f)){
-                    LazyColumn {
-                        items(sortedDistanceUtilitaPOIs.value) { utilitaPOI ->
-                            val distanceUserLocToHub = calculateDistance(utilitaPOI, currentCameraPosition.position)
-                            val twoDecimalFormattingDistance = DecimalFormat("#.##").apply {
-                                roundingMode = RoundingMode.DOWN
-                            }.format(distanceUserLocToHub)
 
-                            Text("${utilitaPOI.description}\n" +
-                                    "${utilitaPOI.address}, ${utilitaPOI.city_town}, ${utilitaPOI.postcode}\n" +
-                                    "${utilitaPOI.phone_number}\n${utilitaPOI.emailAddress}\n" +
-                                    "${utilitaPOI.openingTimes}\n" +
-                                    "${twoDecimalFormattingDistance} Miles",
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .border(width = 3.dp, color = Color.Black)
-                                    .padding(8.dp)
+                    if(selectedUtilitaPOI != null){
+                        val utilitaPOI = selectedUtilitaPOI!!
+                        val distanceUserLocToSelectedHub = calculateDistance(utilitaPOI, currentCameraPosition.position)
+                        val twoDecimalFormattingDistance = DecimalFormat("#.##").apply {
+                            roundingMode = RoundingMode.DOWN
+                        }.format(distanceUserLocToSelectedHub)
+
+                        Text("${utilitaPOI.description}\n" +
+                                "${utilitaPOI.address}, ${utilitaPOI.city_town}, ${utilitaPOI.postcode}\n" +
+                                "${utilitaPOI.phone_number}\n${utilitaPOI.emailAddress}\n" +
+                                "${utilitaPOI.openingTimes}\n" +
+                                "${twoDecimalFormattingDistance} Miles",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .border(width = 3.dp, color = Color.Black)
+                                .padding(8.dp)
+                        )
+                    }else{
+                        LazyColumn {
+                            items(sortedDistanceUtilitaPOIs.value) { utilitaPOI ->
+                                val distanceUserLocToHub = calculateDistance(utilitaPOI, currentCameraPosition.position)
+                                val twoDecimalFormattingDistance = DecimalFormat("#.##").apply {
+                                    roundingMode = RoundingMode.DOWN
+                                }.format(distanceUserLocToHub)
+
+                                Text("${utilitaPOI.description}\n" +
+                                        "${utilitaPOI.address}, ${utilitaPOI.city_town}, ${utilitaPOI.postcode}\n" +
+                                        "${utilitaPOI.phone_number}\n${utilitaPOI.emailAddress}\n" +
+                                        "${utilitaPOI.openingTimes}\n" +
+                                        "${twoDecimalFormattingDistance} Miles",
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .border(width = 3.dp, color = Color.Black)
+                                        .padding(8.dp)
                                 )
+                            }
                         }
                     }
                 }
-
             }
         }
     }
