@@ -299,7 +299,7 @@ class MainActivity : ComponentActivity() {
     fun calculateDistance(poi: UtilitaPOI, cameraPosition : CameraPosition): Double {
         val distanceMetres = SphericalUtil.computeDistanceBetween(cameraPosition.target,(LatLng(poi.lat, poi.lon)))
         // Convert overall distance calculation from Meters to Miles for UK Format.
-        val distanceMiles =  distanceMetres / 1606.34
+        val distanceMiles =  distanceMetres / 1609.34
 
         return distanceMiles
     }
