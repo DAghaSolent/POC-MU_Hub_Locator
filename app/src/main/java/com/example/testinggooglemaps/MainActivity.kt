@@ -187,7 +187,7 @@ class MainActivity : ComponentActivity() {
 
             Column(modifier = Modifier.fillMaxSize()) {
 
-                Box(modifier = Modifier.weight(1.25f)){
+                Box(modifier = Modifier.weight(1.45f)){
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = currentCameraPosition,
@@ -209,7 +209,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                Box(modifier = Modifier.weight(0.75f)){
+                Box(modifier = Modifier.weight(0.55f)){
 
                     if(selectedUtilitaPOI != null){
                         val utilitaPOI = selectedUtilitaPOI!!
