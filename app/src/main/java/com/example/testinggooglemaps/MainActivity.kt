@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -36,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +69,11 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.MapStyleOptions
 import java.io.IOException
 import java.util.Locale
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.text.style.TextAlign
+import com.google.maps.android.SphericalUtil
+import java.math.RoundingMode
+import java.text.DecimalFormat
 
 class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -94,18 +102,35 @@ class MainActivity : ComponentActivity() {
         var postcodeInput by remember { mutableStateOf("") }
         val mapStyle = MapStyle.styleJson
         val localContext = LocalContext.current
+        val utilitaPOIs by mapViewModel.listUtilitaPOI.observeAsState(emptyList())
+        val userLocation by mapViewModel.cameraPositionLiveData.observeAsState()
+        var selectedUtilitaPOI by remember { mutableStateOf<UtilitaPOI?>(null) }
+
+        // List to store a sorted list of Utilita POIs from closest to furthest that will re-compose/
+        // re-draw the list depending on the current camera position on the map's application.
+        val sortedDistanceUtilitaPOIs = remember { mutableStateOf(listOf<UtilitaPOI>()) }
 
         // Setting default camera position to Shirley Utilita Energy Hub.
         val currentCameraPosition = rememberCameraPositionState{
-            position = CameraPosition.fromLatLngZoom(LatLng(50.92139183397814, -1.4320641306790338),
+            position = CameraPosition.fromLatLngZoom(LatLng(50.92094035265595, -1.4319340450913751),
                 12f)
         }
 
-        // Observing any changes within the Camera Viewmodel that could be potentially changed when
-        // the application
-        mapViewModel.cameraPositionLiveData.observe(this) { newCameraPosition ->
-            currentCameraPosition.position = newCameraPosition
+        LaunchedEffect(userLocation) {
+            if (userLocation != null) {
+                currentCameraPosition.position = CameraPosition.fromLatLngZoom(
+                    LatLng(userLocation!!.target.latitude, userLocation!!.target.longitude),12f
+                )
+            }
         }
+
+        LaunchedEffect(currentCameraPosition.position){
+            sortedDistanceUtilitaPOIs.value = utilitaPOIs.sortedBy {utilitaPOI ->
+                calculateDistance(utilitaPOI, currentCameraPosition.position)
+            }
+        }
+
+        LaunchedEffect(currentCameraPosition.position){ selectedUtilitaPOI = null}
 
         val mapProperties = MapProperties(
             mapStyleOptions = MapStyleOptions(mapStyle)
@@ -142,7 +167,17 @@ class MainActivity : ComponentActivity() {
                     Icon(Icons.Filled.Clear, contentDescription = "Clear Postcode Text")
                 }
 
-                Button(onClick = { getUserLocation() }, modifier = Modifier.padding(start = 8.dp)){
+                Button(onClick = {
+                    getUserLocation()
+
+                    if (userLocation != null){
+                        currentCameraPosition.position = CameraPosition.fromLatLngZoom(
+                            LatLng(userLocation!!.target.latitude, userLocation!!.target.longitude),
+                            12f
+                        )
+                    }
+                },
+                    modifier = Modifier.padding(start = 8.dp)){
                     Image(painterResource(
                         id = R.drawable.access_location_icon),
                         contentDescription = "Access Location Icon"
@@ -150,50 +185,73 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = currentCameraPosition,
-                properties = mapProperties
-            ){
-                MarkerComposable(
-                    state = MarkerState(position = LatLng(50.9161, -1.3649)),
-                ){
-                    Image(
-                        painterResource(id = R.drawable.utilita),
-                        contentDescription = null,
-                        Modifier.size(36.dp)
-                    )
-                }
+            Column(modifier = Modifier.fillMaxSize()) {
 
-                MarkerComposable(
-                    state = MarkerState(position = LatLng(50.92139183397814, -1.4320641306790338)),
-                ){
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                Box(modifier = Modifier.weight(1.45f)){
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = currentCameraPosition,
+                        properties = mapProperties,
+                        onMapClick = {selectedUtilitaPOI = null}
                     ){
-
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                .background(Color.Red, shape = RoundedCornerShape(4.dp))
-                        ){
-                            Text(
-                                text = "Utilita Energy Hub Shirley",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(2.dp)
-                            )
+                        utilitaPOIs.forEach { utilitaPOI ->
+                            MarkerComposable(
+                                state = MarkerState(position = LatLng(utilitaPOI.lat, utilitaPOI.lon)),
+                                onClick = {selectedUtilitaPOI = utilitaPOI ; true}
+                            ){
+                                Image(
+                                    painterResource(id = R.drawable.color_utilita),
+                                    contentDescription = null,
+                                    Modifier.size(36.dp)
+                                )
+                            }
                         }
-
-                        Image(
-                            painterResource(id = R.drawable.utilita),
-                            contentDescription = null,
-                            Modifier.size(36.dp)
-                        )
                     }
                 }
 
+                Box(modifier = Modifier.weight(0.55f)){
+
+                    if(selectedUtilitaPOI != null){
+                        val utilitaPOI = selectedUtilitaPOI!!
+                        val distanceUserLocToSelectedHub = calculateDistance(utilitaPOI, currentCameraPosition.position)
+                        val twoDecimalFormattingDistance = DecimalFormat("#.##").apply {
+                            roundingMode = RoundingMode.DOWN
+                        }.format(distanceUserLocToSelectedHub)
+
+                        Text("${utilitaPOI.description}\n" +
+                                "${utilitaPOI.address}, ${utilitaPOI.city_town}, ${utilitaPOI.postcode}\n" +
+                                "${utilitaPOI.phone_number}\n${utilitaPOI.emailAddress}\n" +
+                                "${utilitaPOI.openingTimes}\n" +
+                                "${twoDecimalFormattingDistance} Miles",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .border(width = 3.dp, color = Color.Black)
+                                .padding(8.dp)
+                        )
+                    }else{
+                        LazyColumn {
+                            items(sortedDistanceUtilitaPOIs.value) { utilitaPOI ->
+                                val distanceUserLocToHub = calculateDistance(utilitaPOI, currentCameraPosition.position)
+                                val twoDecimalFormattingDistance = DecimalFormat("#.##").apply {
+                                    roundingMode = RoundingMode.DOWN
+                                }.format(distanceUserLocToHub)
+
+                                Text("${utilitaPOI.description}\n" +
+                                        "${utilitaPOI.address}, ${utilitaPOI.city_town}, ${utilitaPOI.postcode}\n" +
+                                        "${utilitaPOI.phone_number}\n${utilitaPOI.emailAddress}\n" +
+                                        "${utilitaPOI.openingTimes}\n" +
+                                        "${twoDecimalFormattingDistance} Miles",
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .border(width = 3.dp, color = Color.Black)
+                                        .padding(8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -236,5 +294,13 @@ class MainActivity : ComponentActivity() {
             //Request the Location Permissions From the User
             permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
         }
+    }
+
+    fun calculateDistance(poi: UtilitaPOI, cameraPosition : CameraPosition): Double {
+        val distanceMetres = SphericalUtil.computeDistanceBetween(cameraPosition.target,(LatLng(poi.lat, poi.lon)))
+        // Convert overall distance calculation from Meters to Miles for UK Format.
+        val distanceMiles =  distanceMetres / 1609.34
+
+        return distanceMiles
     }
 }
