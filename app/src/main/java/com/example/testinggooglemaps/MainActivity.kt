@@ -103,7 +103,8 @@ class MainActivity : ComponentActivity() {
         val mapStyle = MapStyle.styleJson
         val localContext = LocalContext.current
         val utilitaPOIs by mapViewModel.listUtilitaPOI.observeAsState(emptyList())
-        val userLocation by mapViewModel.cameraPositionLiveData.observeAsState()
+        val userGPSLocation by mapViewModel.userGPSLocationCameraPositionLiveData.observeAsState()
+        val postcodeLocation by mapViewModel.postcodeCameraPositionLiveData.observeAsState()
         var selectedUtilitaPOI by remember { mutableStateOf<UtilitaPOI?>(null) }
 
         // List to store a sorted list of Utilita POIs from closest to furthest that will re-compose/
@@ -116,10 +117,20 @@ class MainActivity : ComponentActivity() {
                 12f)
         }
 
-        LaunchedEffect(userLocation) {
-            if (userLocation != null) {
+        LaunchedEffect(userGPSLocation) {
+            if (userGPSLocation != null) {
                 currentCameraPosition.position = CameraPosition.fromLatLngZoom(
-                    LatLng(userLocation!!.target.latitude, userLocation!!.target.longitude),12f
+                    LatLng(userGPSLocation!!.target.latitude, userGPSLocation!!.target.longitude),
+                    12f
+                )
+            }
+        }
+
+        LaunchedEffect(postcodeLocation) {
+            if (postcodeLocation != null) {
+                currentCameraPosition.position = CameraPosition.fromLatLngZoom(
+                    LatLng(postcodeLocation!!.target.latitude, postcodeLocation!!.target.longitude),
+                    12f
                 )
             }
         }
@@ -150,11 +161,14 @@ class MainActivity : ComponentActivity() {
                 )
 
                 Button(onClick = {
-                    val postcodeLatLng = getLatLngFromPostcode(localContext, postcodeInput)
+                    getLatLngFromPostcode(localContext, postcodeInput)
 
-                    if(postcodeLatLng != null){
-                        currentCameraPosition.position = CameraPosition.fromLatLngZoom(postcodeLatLng, 12f)
-                    }else{
+                    if (postcodeLocation != null){
+                        currentCameraPosition.position = CameraPosition.fromLatLngZoom(
+                            LatLng(postcodeLocation!!.target.latitude, postcodeLocation!!.target.longitude),
+                            12f
+                        )
+                    }else {
                         Toast.makeText(localContext, "Postcode not found", Toast.LENGTH_LONG).show()
                     }
                 },
@@ -170,9 +184,9 @@ class MainActivity : ComponentActivity() {
                 Button(onClick = {
                     getUserLocation()
 
-                    if (userLocation != null){
+                    if (userGPSLocation != null){
                         currentCameraPosition.position = CameraPosition.fromLatLngZoom(
-                            LatLng(userLocation!!.target.latitude, userLocation!!.target.longitude),
+                            LatLng(userGPSLocation!!.target.latitude, userGPSLocation!!.target.longitude),
                             12f
                         )
                     }
@@ -255,19 +269,23 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    fun getLatLngFromPostcode(context: Context, postcode: String): LatLng? {
+    fun getLatLngFromPostcode(context: Context, postcode: String) {
         val geocoder = Geocoder(context, Locale.getDefault())
 
         try{
             val address: MutableList<Address>? = geocoder.getFromLocationName(postcode, 1)
 
             if(!address.isNullOrEmpty()){
-                return LatLng(address[0].latitude, address[0].longitude)
+                mapViewModel.postcodeCameraPositionLiveData.value = CameraPosition.fromLatLngZoom(
+                    LatLng(address[0].latitude, address[0].longitude), 12f
+                )
+            }else{
+                mapViewModel.postcodeCameraPositionLiveData.value = null
             }
         }catch (e: IOException) {
             e.printStackTrace()
+            mapViewModel.postcodeCameraPositionLiveData.value = null
         }
-        return null
     }
 
     fun invokePermissionsLauncher(){
@@ -285,7 +303,7 @@ class MainActivity : ComponentActivity() {
             fusedLocationClient.lastLocation.addOnSuccessListener {location : Location? ->
                 if (location != null) {
                     val userLocation = LatLng(location.latitude, location.longitude)
-                    mapViewModel.cameraPositionLiveData.value = CameraPosition.fromLatLngZoom(userLocation,12f)
+                    mapViewModel.userGPSLocationCameraPositionLiveData.value = CameraPosition.fromLatLngZoom(userLocation,12f)
                 }else{
                     Toast.makeText(this, "GPS Location unavailable", Toast.LENGTH_SHORT).show()
                 }
