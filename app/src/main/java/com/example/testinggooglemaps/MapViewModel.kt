@@ -11,7 +11,8 @@ data class UtilitaPOI(
     )
 
 class MapViewModel : ViewModel(){
-    val cameraPositionLiveData = MutableLiveData<CameraPosition>()
+    val userGPSLocationCameraPositionLiveData = MutableLiveData<CameraPosition>()
+    val postcodeCameraPositionLiveData = MutableLiveData<CameraPosition>()
 
     val listUtilitaPOI = MutableLiveData<List<UtilitaPOI>>()
 
