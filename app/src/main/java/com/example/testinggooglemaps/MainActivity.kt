@@ -110,6 +110,7 @@ class MainActivity : ComponentActivity() {
         val userGPSLocation by mapViewModel.userGPSLocationCameraPositionLiveData.observeAsState()
         val postcodeLocation by mapViewModel.postcodeCameraPositionLiveData.observeAsState()
         var selectedUtilitaPOI by remember { mutableStateOf<UtilitaPOI?>(null) }
+        var isError by remember { mutableStateOf(false) }
 
         // List to store a sorted list of Utilita POIs from closest to furthest that will re-compose/
         // re-draw the list depending on the current camera position on the map's application.
@@ -161,7 +162,9 @@ class MainActivity : ComponentActivity() {
                     value = postcodeInput,
                     onValueChange = {postcodeInput = it},
                     modifier = Modifier.weight(1f),
-                    placeholder = {Text("Enter Postcode")}
+                    placeholder = {Text("Enter Postcode")},
+                    isError = isError,
+                    supportingText = {if (isError){Text("Postcode Not Found")} }
                 )
 
                 Button(onClick = {
@@ -172,8 +175,10 @@ class MainActivity : ComponentActivity() {
                             LatLng(postcodeLocation!!.target.latitude, postcodeLocation!!.target.longitude),
                             12f
                         )
+
+                        isError = false
                     }else {
-                        Toast.makeText(localContext, "Postcode not found", Toast.LENGTH_LONG).show()
+                        isError = true
                     }
                 },
                     modifier = Modifier.padding(start=8.dp)
