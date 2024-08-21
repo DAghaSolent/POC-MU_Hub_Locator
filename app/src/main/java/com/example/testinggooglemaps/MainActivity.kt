@@ -220,18 +220,20 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        MarkerComposable(
-                            state = MarkerState(position = LatLng(
-                                currentCameraPosition.position.target.latitude,
-                                currentCameraPosition.position.target.longitude
+                        if(postcodeLocation != null || userGPSLocation != null){
+                            MarkerComposable(
+                                state = MarkerState(position = LatLng(
+                                    currentCameraPosition.position.target.latitude,
+                                    currentCameraPosition.position.target.longitude
                                 )
-                            )
-                        ){
-                            Image(
-                                painterResource(id = R.drawable.current_cam_marker),
-                                contentDescription = null,
-                                Modifier.size(36.dp)
-                            )
+                                )
+                            ){
+                                Image(
+                                    painterResource(id = R.drawable.current_cam_marker),
+                                    contentDescription = null,
+                                    Modifier.size(36.dp)
+                                )
+                            }
                         }
                     }
                 }
