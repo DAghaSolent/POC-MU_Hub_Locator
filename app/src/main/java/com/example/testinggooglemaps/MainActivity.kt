@@ -210,7 +210,7 @@ class MainActivity : ComponentActivity() {
                         utilitaPOIs.forEach { utilitaPOI ->
                             MarkerComposable(
                                 state = MarkerState(position = LatLng(utilitaPOI.lat, utilitaPOI.lon)),
-                                onClick = {selectedUtilitaPOI = utilitaPOI ; true}
+                                onClick = {selectedUtilitaPOI = utilitaPOI ; false}
                             ){
                                 Image(
                                     painterResource(id = R.drawable.color_utilita),
